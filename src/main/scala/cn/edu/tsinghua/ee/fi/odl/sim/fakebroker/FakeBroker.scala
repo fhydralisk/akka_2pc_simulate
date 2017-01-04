@@ -1,9 +1,6 @@
 package cn.edu.tsinghua.ee.fi.odl.sim.fakebroker
 
 import akka.actor.ActorRef
-import cn.edu.tsinghua.ee.fi.odl.sim.util.{
-  DataBroker, TransactionFactory, Transaction, TransactionProxy
-  }
 
 import concurrent.Future
 
@@ -12,7 +9,8 @@ trait TransactionIdGetter {
   def getNewTransactionId : Future[Int]
 }
 
-class FakeBroker(txnIdGetter: TransactionIdGetter) extends DataBroker with TransactionFactory {
+class FakeBroker(txnIdGetter: TransactionIdGetter, cohortProxyFactory: CohortProxyFactory) 
+  extends DataBroker with TransactionFactory {
   
   override def newTransaction() = {
     import concurrent.ExecutionContext.Implicits.global 
@@ -21,6 +19,7 @@ class FakeBroker(txnIdGetter: TransactionIdGetter) extends DataBroker with Trans
   }
   
   override def submit(txn: Transaction) = {
-    
+    val cohortProxy = cohortProxyFactory.getCohortProxy(txn)
+    cohortProxy foreach { _.submit() }
   }
 }
