@@ -5,7 +5,7 @@ import akka.actor.{Actor, ActorLogging}
 
 
 object Shard {
-  type MQType
+  
 }
 
 class Shard(canCommitQueue: SimplifiedQueue[AnyRef]) extends Actor with ActorLogging {

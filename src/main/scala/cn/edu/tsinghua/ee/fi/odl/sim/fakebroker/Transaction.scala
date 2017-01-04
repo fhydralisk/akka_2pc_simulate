@@ -28,7 +28,7 @@ object Transaction {
 }
 
 class TransactionProxy(val transId: Int, delegate: TransactionFactory) extends Transaction {
-  private val subTransactions = new HashMap[ActorRef, Transaction]
+  val subTransactions = new HashMap[ActorRef, Transaction]
   
   def put(dest: ActorRef) {
     subTransactions += dest -> new WriteTransaction(transId)
