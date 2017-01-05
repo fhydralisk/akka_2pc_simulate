@@ -1,17 +1,17 @@
 package cn.edu.tsinghua.ee.fi.odl.sim.nodes
 
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, Props, ActorContext}
 import com.typesafe.config.Config
-import cn.edu.tsinghua.ee.fi.odl.sim.util.{SimplifiedQueue, ActorContext}
+import cn.edu.tsinghua.ee.fi.odl.sim.util.{SimplifiedQueue}
 import cn.edu.tsinghua.ee.fi.odl.sim.util.{QueueWrapper, TreeSetWrapper}
 import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.Transaction
 
 
-trait Shard
+trait Shard extends Actor
 
-class ShardFactory(config: Config, actorContext: ActorContext) {
-  def newShard(name: String) = {
+class ShardFactory(config: Config) {
+  def newShard(name: String, actorContext: ActorContext) = {
     val canCommitQueue: SimplifiedQueue[Transaction] = config.getString("can-commit-queue-type") match {
       case "priorityQueue" =>
         new TreeSetWrapper[Transaction]()
@@ -26,7 +26,7 @@ class ShardFactory(config: Config, actorContext: ActorContext) {
         DealDeadlockShard.props(canCommitQueue)
     }
     
-    actorContext.actorSystem.actorOf(shardProps, name=name)
+    actorContext.actorOf(shardProps, name=name)
   }
 }
 
@@ -38,31 +38,33 @@ object DealDeadlockShard {
   def props(canCommitQueue: SimplifiedQueue[Transaction]): Props = Props(new DealDeadlockShard(canCommitQueue))
 }
 
-abstract class AbstractShard(canCommitQueue: SimplifiedQueue[Transaction]) extends Shard with Actor with ActorLogging {
-  //TODO: AnyRef -> Transaction
+abstract class AbstractShard(canCommitQueue: SimplifiedQueue[Transaction]) extends Shard with ActorLogging {
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitMessages._
-  def receive = {      
+  
+  var processingTransaction: Option[Transaction] = None
+  
+  def receive = processCanCommit orElse processCommit
+  
+  def processCommit: Actor.Receive = {      
     case CommitMessage(txn) =>
       sender() ! CommitAck()
     case unknown @ _ => 
       log.warning("Message Not Found: " + unknown.toString())
   }
+  
+  def processCanCommit: Actor.Receive
 }
 
 class NormalShard(canCommitQueue: SimplifiedQueue[Transaction]) extends AbstractShard(canCommitQueue) {
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitMessages._
-  override def receive = {
+  def processCanCommit = {
     case CanCommitMessage(txn) =>
-    case _ =>
-      super.receive
   }
 }
 
 class DealDeadlockShard(canCommitQueue: SimplifiedQueue[Transaction]) extends AbstractShard(canCommitQueue) {
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitMessages._
-  override def receive = {
+  def processCanCommit = {
     case CanCommitMessage(txn) =>
-    case _ =>
-      super.receive
   }
 }
