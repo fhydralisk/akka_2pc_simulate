@@ -74,7 +74,7 @@ abstract class AbstractCohortProxy extends CohortProxy {
   }
 }
 
-class SyncCohortProxy(txn: Transaction) extends AbstractCohortProxy {
+class SyncCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
   
   def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[Null]) {
     import concurrent.ExecutionContext.Implicits.global
@@ -90,11 +90,14 @@ class SyncCohortProxy(txn: Transaction) extends AbstractCohortProxy {
   }
 }
 
-class ForwardCohortProxy(txn: Transaction) extends AbstractCohortProxy {
-
+class ForwardCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
+  
+  def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[Null]) {
+    
+  }
 }
 
-class ConcurrentCohortProxy(txn: Transaction) extends AbstractCohortProxy {
+class ConcurrentCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
   
   def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[Null]) = {
     import concurrent.ExecutionContext.Implicits.global

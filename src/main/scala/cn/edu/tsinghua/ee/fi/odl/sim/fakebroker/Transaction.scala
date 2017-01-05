@@ -7,7 +7,7 @@ import concurrent.Future
 
 trait Transaction {
   val transId : Int
-  def submit() : Future[Nothing]
+  def submit() : Future[Null]
   def put(dest: ActorRef) : Unit //Fake put, ignore the parameter
 }
 
@@ -16,7 +16,7 @@ trait DataBroker {
 }
 
 trait TransactionFactory {
-  def summit(txn: Transaction): Future[Nothing]
+  def submit(txn: Transaction): Future[Null]
 }
 
 object Transaction {
@@ -34,11 +34,18 @@ class TransactionProxy(val transId: Int, delegate: TransactionFactory) extends T
     subTransactions += dest -> new WriteTransaction(transId)
   }
   
-  def summit() = {
-    delegate.summit(this)
+  def submit() = {
+    delegate.submit(this)
   }
 }
 
 class WriteTransaction(val transId: Int) extends Transaction {
   
+  def submit() = {
+    Future.failed[Null](new NoSuchMethodException())
+  }
+  
+  def put(dest: ActorRef) {
+    
+  }
 }

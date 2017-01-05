@@ -18,8 +18,8 @@ class FakeBroker(txnIdGetter: TransactionIdGetter, cohortProxyFactory: CohortPro
     newTransactionId.transform[Transaction](s => new TransactionProxy(s, this), f => f)
   }
   
-  override def submit(txn: Transaction) = {
+  def submit(txn: Transaction) = {
     val cohortProxy = cohortProxyFactory.getCohortProxy(txn)
-    cohortProxy foreach { _.submit() }
+    cohortProxy map { _.submit() } getOrElse Future.failed(new NullPointerException)
   }
 }
