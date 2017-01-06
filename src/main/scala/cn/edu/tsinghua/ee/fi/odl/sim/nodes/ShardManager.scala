@@ -2,11 +2,12 @@ package cn.edu.tsinghua.ee.fi.odl.sim.nodes
 
 import akka.actor.{ActorRef, Props, Actor, ActorLogging, PoisonPill}
 import concurrent.{Future, Promise}
+import util.{Success, Failure}
 import collection.mutable.HashMap
 
 
 class ShardManager extends Actor with ActorLogging {
-  
+  //TODO: Send GetShardFactory Message to "Leader"
   import ShardManagerMessages._
   
   val shardFactoryPromise = Promise[ShardFactory]()
@@ -45,6 +46,17 @@ class ShardManager extends Actor with ActorLogging {
   }
   
   def getShardFactory() : Option[ShardFactory] = {
-    None
+    val sfFuture = shardFactoryPromise.future
+    sfFuture.isCompleted match {
+      case true =>
+        sfFuture.value.get match {
+          case Success(sf) =>
+            Some(sf)
+          case _ =>
+            None
+        }
+      case false =>
+        None
+    }
   }
 }
