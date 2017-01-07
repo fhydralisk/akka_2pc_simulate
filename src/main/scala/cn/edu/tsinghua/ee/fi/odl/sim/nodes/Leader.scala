@@ -5,9 +5,9 @@ import akka.cluster.Cluster
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory, ConfigValue}
-import ShardManagerMessages._
-import TransactionMessages._
 import concurrent.duration._
+import cn.edu.tsinghua.ee.fi.odl.sim.util.TransactionMessages._
+import cn.edu.tsinghua.ee.fi.odl.sim.util.ShardManagerMessages._
 
 
 object LeaderConfiguration {
@@ -35,6 +35,7 @@ class Leader extends Actor with ActorLogging {
   }
   
   def receive = {
+    // TODO: forward can-commit to CanCommitProxy
     case msg : GetShardFactory =>
       configDispatcher foreach { 
         _ forward msg
@@ -155,5 +156,12 @@ class TransactionIDDispatcher extends Actor with ActorLogging {
     case GetTransactionId() =>
       sender ! GetTransactionIdReply(transactionIdNext)
       transactionIdNext += 1
+  }
+}
+
+class CanCommitProxy extends Actor with ActorLogging {
+  // TODO: Implement this proxy which can forward can-commit message to its destination
+  override def receive = {
+    case _ =>
   }
 }

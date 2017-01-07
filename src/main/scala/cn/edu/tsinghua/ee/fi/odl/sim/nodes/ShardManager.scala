@@ -6,6 +6,7 @@ import concurrent.{Future, Promise}
 import util.{Success, Failure}
 import collection.mutable.HashMap
 import concurrent.duration._
+import cn.edu.tsinghua.ee.fi.odl.sim.util.ShardManagerMessages
 
 
 object ShardManager { 

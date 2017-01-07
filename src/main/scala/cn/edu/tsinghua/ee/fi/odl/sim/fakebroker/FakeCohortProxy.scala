@@ -90,7 +90,7 @@ class SyncCohortProxy(override val txn: Transaction) extends AbstractCohortProxy
 }
 
 class ForwardCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
-  
+  //TODO: Implement this
   def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[Null]) {
     
   }

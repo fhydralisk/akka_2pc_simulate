@@ -1,4 +1,4 @@
-package cn.edu.tsinghua.ee.fi.odl.sim.nodes
+package cn.edu.tsinghua.ee.fi.odl.sim.util
 
 import com.typesafe.config.Config
 

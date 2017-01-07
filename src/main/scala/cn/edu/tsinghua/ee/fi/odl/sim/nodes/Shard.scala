@@ -177,6 +177,7 @@ class NormalShard(
 }
 
 
+// TODO: Implement this shard, which could respond to multiple can-commit message with different reply
 class DealDeadlockShard(
     canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], 
     dataTree: DataTree
