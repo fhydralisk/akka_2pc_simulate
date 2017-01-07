@@ -10,3 +10,8 @@ object ShardManagerMessages {
   case class Destroy(name: String)
   case class DestroyReply(success: Boolean)
 }
+
+object TransactionMessages {
+  case class GetTransactionId()
+  case class GetTransactionIdReply(transId: Int)
+}

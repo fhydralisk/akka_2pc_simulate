@@ -6,6 +6,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory, ConfigValue}
 import ShardManagerMessages._
+import TransactionMessages._
 import concurrent.duration._
 
 
@@ -14,13 +15,6 @@ object LeaderConfiguration {
   val shardConfig = leaderConfig.getConfig("shard")
   val shardDeployConfig = shardConfig.getConfig("shard-deploy")
   val shardFactoryConfig = shardConfig.getConfig("shard-factory")
-}
-
-
-object ShardConfigDispatcher {
-  object ShardDeployTick
-  
-  def props : Props = Props(new ShardConfigDispatcher)
 }
 
 object Leader {
@@ -32,9 +26,31 @@ object Leader {
  * 
  */
 class Leader extends Actor with ActorLogging {
-  def receive = {
-    case _ =>
+  var configDispatcher : Option[ActorRef] = None
+  var transactionIdDispatcher: Option[ActorRef] = None
+  
+  override def preStart = {
+    configDispatcher = Some(context.actorOf(ShardConfigDispatcher.props))
+    transactionIdDispatcher = Some(context.actorOf(TransactionIDDispatcher.props))
   }
+  
+  def receive = {
+    case msg : GetShardFactory =>
+      configDispatcher foreach { 
+        _ forward msg
+      }
+    case msg : GetTransactionId =>
+      transactionIdDispatcher foreach {
+        _ forward msg
+      }
+  }
+}
+
+
+object ShardConfigDispatcher {
+  object ShardDeployTick
+  
+  def props : Props = Props(new ShardConfigDispatcher)
 }
 
 
@@ -93,12 +109,12 @@ class ShardConfigDispatcher extends Actor with ActorLogging {
       roleShardManagers foreach { roleActorSelection =>
         shards foreach { shard =>
           (roleActorSelection ? Deploy(shard))(shardDeployTimeout, self) map {
-            case DeployReply(suc) if suc =>
+            case DeployReply(suc)  =>
               log.info(s"Deploy of shard: $shard in role $role succeed")
               deployedShardsOfRoles += (role -> (Set(shard) ++ deployedShardsOfRoles.getOrElse(role, Set())))
               
-            case _ =>
-              log.debug(s"Deploy of shard: $shard in role $role returns false")
+            case m @ _ =>
+              log.debug(s"Unknown deploy reply $m")
               
           } recover {
             case e @ _ =>
@@ -126,8 +142,18 @@ class ShardConfigDispatcher extends Actor with ActorLogging {
 }
 
 
+object TransactionIDDispatcher {
+  def props: Props = Props(new TransactionIDDispatcher)
+}
+
+
 class TransactionIDDispatcher extends Actor with ActorLogging {
+  
+  var transactionIdNext = 1
+  
   def receive = {
-    case _ =>
+    case GetTransactionId() =>
+      sender ! GetTransactionIdReply(transactionIdNext)
+      transactionIdNext += 1
   }
 }
