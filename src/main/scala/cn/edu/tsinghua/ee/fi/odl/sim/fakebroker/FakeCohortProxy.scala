@@ -65,7 +65,7 @@ abstract class AbstractCohortProxy extends CohortProxy {
     import CommitMessages._
     import concurrent.ExecutionContext.Implicits.global
     
-    (shard ? CanCommitMessage(txn)).transform(_ match {
+    (shard ? CanCommitMessage(txn)).transform({
       case _: CanCommitNack => 
         throw Exceptions.CanCommitFailedException
       case s @ _ =>

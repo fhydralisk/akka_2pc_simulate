@@ -157,6 +157,10 @@ abstract class AbstractShard(
     }
   }
   
+  override def postStop {
+    // TODO: Shall we kill the abort timer here?
+  }
+  
 }
 
 
