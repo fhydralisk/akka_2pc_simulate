@@ -9,6 +9,7 @@ import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.Transaction
 import cn.edu.tsinghua.ee.fi.odl.sim.fakedatatree._
 import concurrent.duration._
 
+
 trait Shard extends Actor
 
 
@@ -52,6 +53,7 @@ abstract class AbstractShard(
     canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], 
     dataTree: DataTree
     ) extends Shard with ActorLogging {
+  
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitMessages._
   
   protected var processingTransaction: Option[Tuple2[Transaction, Cancellable]] = None
@@ -168,6 +170,7 @@ class NormalShard(
     canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], 
     dataTree: DataTree
     ) extends AbstractShard(canCommitQueue, dataTree) {
+  
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitMessages._
   
   protected def processCanCommit = {
@@ -182,6 +185,7 @@ class DealDeadlockShard(
     canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], 
     dataTree: DataTree
     ) extends AbstractShard(canCommitQueue, dataTree) {
+  
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitMessages._
   
   protected def processCanCommit = {

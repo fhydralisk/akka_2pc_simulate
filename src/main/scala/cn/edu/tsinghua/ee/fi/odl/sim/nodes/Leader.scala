@@ -165,3 +165,10 @@ class CanCommitProxy extends Actor with ActorLogging {
     case _ =>
   }
 }
+
+class MetricsActor extends Actor with ActorLogging {
+  // TODO: Implement this metrics actor to take the test meansurement
+  override def receive = {
+    case _ =>
+  }
+}

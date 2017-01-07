@@ -14,6 +14,7 @@ trait CohortProxy {
   def submit(): Future[Null]
 }
 
+
 class CohortProxyFactory(config: Config) {
   def getCohortProxy(txn: Transaction) : Option[CohortProxy] = {
     config.getString("cohort-proxy-type") match {
@@ -28,6 +29,7 @@ class CohortProxyFactory(config: Config) {
     }
   }
 }
+
 
 abstract class AbstractCohortProxy extends CohortProxy {
   
@@ -71,8 +73,10 @@ abstract class AbstractCohortProxy extends CohortProxy {
       case s @ _ =>
         s
     }, f => f);
+    // TODO: Abort shall be taken care here
   }
 }
+
 
 class SyncCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
   
@@ -89,12 +93,14 @@ class SyncCohortProxy(override val txn: Transaction) extends AbstractCohortProxy
   }
 }
 
+
 class ForwardCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
   //TODO: Implement this
   def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[Null]) {
     
   }
 }
+
 
 class ConcurrentCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
   
