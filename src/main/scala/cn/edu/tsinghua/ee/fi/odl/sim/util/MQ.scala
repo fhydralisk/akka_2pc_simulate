@@ -29,7 +29,7 @@ class TreeSetWrapper[T](implicit ordering: Ordering[T]) extends SimplifiedQueue[
     backing += node
   }
   
-  def poll() = {
+  def poll = {
     val e = backing.headOption
     // if e is None, then map will not be run and returns None
     e.map(f => {
@@ -38,5 +38,5 @@ class TreeSetWrapper[T](implicit ordering: Ordering[T]) extends SimplifiedQueue[
     })
   }
   
-  def peek() = backing.headOption
+  def peek = backing.headOption
 }

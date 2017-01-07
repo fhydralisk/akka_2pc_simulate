@@ -38,6 +38,8 @@ class TransactionProxy(val transId: Int, delegate: TransactionFactory) extends T
   def submit() = {
     delegate.submit(this)
   }
+  
+  def modification = null
 }
 
 class WriteTransaction(val transId: Int) extends Transaction {
@@ -49,5 +51,7 @@ class WriteTransaction(val transId: Int) extends Transaction {
   def put(dest: ActorRef) {
     
   }
+  
+  def modification = null
 }
 

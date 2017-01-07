@@ -56,7 +56,7 @@ abstract class AbstractCohortProxy extends CohortProxy {
     }
     
     Future.sequence(replies).transform(
-        s => commitResultPromise success null, 
+        _ => commitResultPromise success null, 
         f => { commitResultPromise failure Exceptions.CommitTimeoutException; f }
         )
   }  
@@ -83,10 +83,9 @@ class SyncCohortProxy(override val txn: Transaction) extends AbstractCohortProxy
     
     var queue = Future[Any]{}
     for ( d <- sortedTxns ) queue = queue flatMap { _ => invokeCanCommit(d._1, d._2) }
-    queue map (_ => doPreCommit(txns, commitResultPromise)) recover { 
+    queue map { _ => doPreCommit(txns, commitResultPromise) } recover { 
       case exp @ _ => commitResultPromise failure exp 
-      }
-    
+    }
   }
 }
 
@@ -104,11 +103,11 @@ class ConcurrentCohortProxy(override val txn: Transaction) extends AbstractCohor
     import CommitMessages._
     
     val replies = txns.subTransactions map {
-      d => invokeCanCommit(d._1, d._2)
+      invokeCanCommit _ tupled
     }
     
     Future.sequence(replies).transform(
-        s => doPreCommit(txns, commitResultPromise), 
+        _ => doPreCommit(txns, commitResultPromise), 
         f => { commitResultPromise.failure(f); f }
         )
   }

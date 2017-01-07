@@ -15,7 +15,7 @@ class FakeBroker(txnIdGetter: TransactionIdGetter, cohortProxyFactory: CohortPro
   override def newTransaction() = {
     import concurrent.ExecutionContext.Implicits.global 
     val newTransactionId = txnIdGetter.getNewTransactionId
-    newTransactionId.transform[Transaction](s => new TransactionProxy(s, this), f => f)
+    newTransactionId.transform[Transaction](new TransactionProxy(_, this), f => f)
   }
   
   def submit(txn: Transaction) = {
