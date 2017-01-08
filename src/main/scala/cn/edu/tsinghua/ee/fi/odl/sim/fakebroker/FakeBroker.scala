@@ -1,20 +1,17 @@
 package cn.edu.tsinghua.ee.fi.odl.sim.fakebroker
 
 import akka.actor.ActorRef
+import com.typesafe.config.Config
 
 import concurrent.Future
 
 
-trait TransactionIdGetter {
-  def getNewTransactionId : Future[Int]
-}
-
-class FakeBroker(txnIdGetter: TransactionIdGetter, cohortProxyFactory: CohortProxyFactory) 
+class FakeBroker(txnIdGetter: => Future[Int], cohortProxyFactory: CohortProxyFactory, settings: Config) 
   extends DataBroker with TransactionFactory {
   
   override def newTransaction() = {
     import concurrent.ExecutionContext.Implicits.global 
-    val newTransactionId = txnIdGetter.getNewTransactionId
+    val newTransactionId = txnIdGetter
     newTransactionId.transform[Transaction](new TransactionProxy(_, this), f => f)
   }
   

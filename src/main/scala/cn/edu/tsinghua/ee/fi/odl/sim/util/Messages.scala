@@ -15,3 +15,10 @@ object TransactionMessages {
   case class GetTransactionId()
   case class GetTransactionIdReply(transId: Int)
 }
+
+object FrontendMessages {
+  case class GetDataBroker()
+  case class GetDataBrokerReply(brokerConfig: Config, cohortProxyConfig: Config)
+  case class DoSubmit(submitConfig: Config)
+  case class SubmitMetrics() //TODO: Parameters here
+}

@@ -3,9 +3,9 @@ package cn.edu.tsinghua.ee.fi.odl.sim.nodes
 import akka.actor.{ActorRef, Props, Actor, ActorLogging, PoisonPill}
 import akka.cluster.Cluster
 import concurrent.{Future, Promise}
+import concurrent.duration._
 import util.{Success, Failure}
 import collection.mutable.HashMap
-import concurrent.duration._
 import cn.edu.tsinghua.ee.fi.odl.sim.util.ShardManagerMessages
 
 
@@ -15,14 +15,12 @@ object ShardManager {
 }
 
 
-class ShardManager extends Actor with ActorLogging {
+class ShardManager extends EndActor with ActorLogging {
   
   import ShardManagerMessages._
   import ShardManager._
   
   import concurrent.ExecutionContext.Implicits.global
-  
-  val cluster = Cluster(context.system)
   
   private val shardFactoryPromise = Promise[ShardFactory]()
   val shards = HashMap[String, ActorRef]()
@@ -74,13 +72,12 @@ class ShardManager extends Actor with ActorLogging {
   
   private def tryGetFactory {
     //Send GetShardFactory Message to "Leader"
-    cluster.state.members.filter { n => n.hasRole("leader") && n.status == akka.cluster.MemberStatus.Up } map { _.address.toString } foreach { addr =>
-      context.actorSelection(leaderActorOfAddress(addr)) ! GetShardFactory()
+    leaderActorPath foreach {
+      context.actorSelection(_) ! GetShardFactory()
     }
   }
   
-  private def leaderActorOfAddress(address: String) = address + "/user/leader"
-  
+  // FIXME: This is really ugly
   private def getShardFactory() : Option[ShardFactory] = {
     val sfFuture = shardFactoryPromise.future
     sfFuture.isCompleted match {

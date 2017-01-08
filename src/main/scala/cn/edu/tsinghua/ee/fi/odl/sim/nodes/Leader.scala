@@ -8,6 +8,7 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigValue}
 import concurrent.duration._
 import cn.edu.tsinghua.ee.fi.odl.sim.util.TransactionMessages._
 import cn.edu.tsinghua.ee.fi.odl.sim.util.ShardManagerMessages._
+import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages._
 
 
 object LeaderConfiguration {
@@ -15,6 +16,8 @@ object LeaderConfiguration {
   val shardConfig = leaderConfig.getConfig("shard")
   val shardDeployConfig = shardConfig.getConfig("shard-deploy")
   val shardFactoryConfig = shardConfig.getConfig("shard-factory")
+  val brokerConfig = leaderConfig.getConfig("data-broker")
+  val cohortProxyConfig = leaderConfig.getConfig("cohort-proxy")
 }
 
 object Leader {
@@ -26,24 +29,30 @@ object Leader {
  * 
  */
 class Leader extends Actor with ActorLogging {
-  var configDispatcher : Option[ActorRef] = None
+  var shardConfigDispatcher : Option[ActorRef] = None
+  var frontendConfigDispatcher : Option[ActorRef] = None
   var transactionIdDispatcher: Option[ActorRef] = None
   
   override def preStart = {
-    configDispatcher = Some(context.actorOf(ShardConfigDispatcher.props))
+    shardConfigDispatcher = Some(context.actorOf(ShardConfigDispatcher.props))
     transactionIdDispatcher = Some(context.actorOf(TransactionIDDispatcher.props))
+    frontendConfigDispatcher = Some(context.actorOf(FrontendConfigDispatcher.props))
   }
   
   def receive = {
     // TODO: forward can-commit to CanCommitProxy
     case msg : GetShardFactory =>
-      configDispatcher foreach { 
+      shardConfigDispatcher foreach { 
         _ forward msg
       }
     case msg : GetTransactionId =>
       transactionIdDispatcher foreach {
         _ forward msg
       }
+    case msg : GetDataBroker =>
+      frontendConfigDispatcher foreach {
+        _ forward msg
+    }
   }
 }
 
@@ -140,6 +149,19 @@ class ShardConfigDispatcher extends Actor with ActorLogging {
       e.hasRole(role) && e.status == akka.cluster.MemberStatus.Up 
     } map { _.address.toString + "/user/shardmanager" } headOption
   
+}
+
+
+object FrontendConfigDispatcher {
+  def props: Props = Props(new FrontendConfigDispatcher)
+}
+
+
+class FrontendConfigDispatcher extends Actor with ActorLogging {
+  def receive = {
+    case GetDataBroker() =>
+      sender ! GetDataBrokerReply(LeaderConfiguration.brokerConfig, LeaderConfiguration.cohortProxyConfig)
+  }
 }
 
 
