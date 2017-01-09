@@ -9,7 +9,7 @@ import cn.edu.tsinghua.ee.fi.odl.sim.nodes.ShardManager
  * Construct ShardMananger Actor when Cluster is up
  */
 object BackendApp {
-  def main(args: String*) {
+  def main(args: Array[String]) {
     
     val argsToRoles = if (args.isEmpty) "" else (("\"" + args.head + "\"") /: args.tail) { (s, e) => s + ", \"" + e + "\"" }
     val backendConfig = ConfigFactory.load("backend.conf").withFallback(ConfigFactory.parseString(s"akka.cluster.roles=[$argsToRoles]"))

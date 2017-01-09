@@ -67,7 +67,16 @@ class Frontend extends EndActor with ActorLogging {
     case DoSubmit(config) =>
       // TODO: do submit here and reply metrics?
       val broker = dataBrokerPromise.future.value.get.get
-
+      val trans = broker.newTransaction
+      trans map { t =>
+        t.put("shard1", "")
+        t.put("shard2", "")
+        t.submit()
+      } map { _ =>
+        println("Submit OK")
+      } recover { case _ =>
+        println("Submit Failed")
+      }
   }
   
   def tryGetSettings  {

@@ -1,11 +1,12 @@
 #!/bin/bash
 
-MAIN_CLASS="com.nopqzip.App"
+MAIN_CLASS="cn.edu.tsinghua.ee.fi.odl.sim.apps.LeaderApp"
 
 if [ -n $1 ]; then
-  [ $1 = "watcher" ] && MAIN_CLASS="com.nopqzip.WatcherApp"
-  [ $1 = "watchee" ] && MAIN_CLASS="com.nopqzip.WatcheeApp"
-  [ $1 = "idiot" ] && MAIN_CLASS="com.nopqzip.IdiotApp"
+  [ $1 = "frontend" ] && MAIN_CLASS="cn.edu.tsinghua.ee.fi.odl.sim.apps.FrontendApp"
+  [ $1 = "backend" ] && MAIN_CLASS="cn.edu.tsinghua.ee.fi.odl.sim.apps.BackendApp"
+  [ $1 = "leader" ] && MAIN_CLASS="cn.edu.tsinghua.ee.fi.odl.sim.apps.LeaderApp"
+  [ $1 = "operator" ] && MAIN_CLASS="cn.edu.tsinghua.ee.fi.odl.sim.apps.OperatorApp"
 fi
 
 echo "Running $MAIN_CLASS"

@@ -8,7 +8,7 @@ import cn.edu.tsinghua.ee.fi.odl.sim.nodes.Leader
  * Construct Leader Actor
  */
 object LeaderApp {
-  def main(args: String*) {
+  def main(args: Array[String]) {
     
     val leaderConfig = ConfigFactory.load("leader.conf").withFallback(ConfigFactory.parseString("akka.cluster.roles=[\"leader\"]"))
     val system = AkkaSystem.createSystem(Some(leaderConfig))
