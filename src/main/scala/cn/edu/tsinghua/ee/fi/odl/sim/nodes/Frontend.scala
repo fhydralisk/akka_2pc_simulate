@@ -5,7 +5,6 @@ import concurrent.{Promise, Future}
 import concurrent.duration._
 import akka.actor.{Actor, ActorRef, ActorSelection, ActorLogging, Props}
 import akka.pattern.ask
-import akka.cluster.pubsub.{DistributedPubSubMediator, DistributedPubSub}
 import akka.util.Timeout
 import com.typesafe.config.Config
 import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.{DataBroker, FakeBroker, CohortProxyFactory}
@@ -16,11 +15,11 @@ object Frontend {
   def props: Props = Props(new Frontend)
 }
 
-
+//TODO: metrics here
 class Frontend extends EndActor with ActorLogging {
   import Frontend._
   import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages._
-  import DistributedPubSubMediator.{Subscribe, SubscribeAck}
+  import akka.cluster.pubsub.DistributedPubSubMediator.{Subscribe, SubscribeAck}
   
   import concurrent.ExecutionContext.Implicits.global
   
@@ -45,9 +44,10 @@ class Frontend extends EndActor with ActorLogging {
     val role = shardDeployment flatMap { m =>
        (m filter { _._2.contains(s) } headOption) map { _._1 } 
     }
-    
-    (role map { roleAddresses(_) headOption } ) map { addr => 
-      context.actorSelection(addr + s"/user/shardmanager/$s") 
+
+    (role flatMap { roleAddresses(_) headOption } ) map { addr => 
+      val actorPath = addr + s"/user/shardmanager/$s"
+      context.actorSelection(actorPath)
     } getOrElse { 
       // this throw cause ask failed immediately
       throw new IllegalArgumentException 
@@ -111,15 +111,17 @@ class Frontend extends EndActor with ActorLogging {
   }
   
   def doSubmitTest(config: Config) {
+    import cn.edu.tsinghua.ee.fi.odl.sim.util.MetricsMessages._
     log.info(s"start submit test with config: $config")
     val broker = dataBrokerPromise.future.value.get.get
     val trans = broker.newTransaction
-    trans map { t =>
+    trans flatMap { t =>
       t.put("shard1", "")
       t.put("shard2", "")
-      t.submit()
-    } map { _ =>
+      t.submit() map { t.transId -> _ }
+    } map { case (transId, metrics) =>
       println("Submit OK")
+      metrics.phaseToTimestamp foreach { case (phase, timestamp) => publish("metrics", MetricsElement(transId, timestamp, phase)) }
     } recover { case e @ _ =>
       println(s"Submit Failed, expection: $e")
     }
