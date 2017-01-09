@@ -5,6 +5,7 @@ import concurrent.{Promise, Future}
 import concurrent.duration._
 import akka.actor.{Actor, ActorRef, ActorSelection, ActorLogging, Props}
 import akka.pattern.ask
+import akka.cluster.pubsub.{DistributedPubSubMediator, DistributedPubSub}
 import akka.util.Timeout
 import com.typesafe.config.Config
 import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.{DataBroker, FakeBroker, CohortProxyFactory}
@@ -19,6 +20,7 @@ object Frontend {
 class Frontend extends EndActor with ActorLogging {
   import Frontend._
   import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages._
+  import DistributedPubSubMediator.{Subscribe, SubscribeAck}
   
   import concurrent.ExecutionContext.Implicits.global
   
@@ -30,6 +32,9 @@ class Frontend extends EndActor with ActorLogging {
   val getTransactionIdTimeout = 2 seconds
   
   val getSettingsTickTask = context.system.scheduler.schedule(2 seconds, getSettingsTickTimeout, self, GetSettingsTick)
+  
+  val mediator = DistributedPubSub(context.system).mediator
+  mediator ! Subscribe("dosubmit", self)
   
   def receive = uninitialized
   
@@ -56,7 +61,10 @@ class Frontend extends EndActor with ActorLogging {
       constructShardMap(shardDeployment)
       dataBrokerPromise success new FakeBroker(getNewTransactionId, new CohortProxyFactory(cohortProxyConfig), brokerConfig)
       becomeInitialized
-    case _ =>
+    case SubscribeAck(Subscribe(topic, None, `self`)) =>
+      log.info(s"Frontend has successfully subscribed topic $topic")
+    case m @ _ =>
+      log.warning(s"unhandled message $m")
   }
   
   private def initialized : Actor.Receive = {
@@ -66,17 +74,9 @@ class Frontend extends EndActor with ActorLogging {
       // duplicated reply, ignore 
     case DoSubmit(config) =>
       // TODO: do submit here and reply metrics?
-      val broker = dataBrokerPromise.future.value.get.get
-      val trans = broker.newTransaction
-      trans map { t =>
-        t.put("shard1", "")
-        t.put("shard2", "")
-        t.submit()
-      } map { _ =>
-        println("Submit OK")
-      } recover { case _ =>
-        println("Submit Failed")
-      }
+      doSubmitTest
+    case m @ _ =>
+      log.warning(s"unhandled message $m")
   }
   
   def tryGetSettings  {
@@ -106,6 +106,20 @@ class Frontend extends EndActor with ActorLogging {
           transId
       }, f => f)
     } getOrElse (Future.failed(new NullPointerException))
+  }
+  
+  def doSubmitTest {
+    val broker = dataBrokerPromise.future.value.get.get
+    val trans = broker.newTransaction
+    trans map { t =>
+      t.put("shard1", "")
+      t.put("shard2", "")
+      t.submit()
+    } map { _ =>
+      println("Submit OK")
+    } recover { case _ =>
+      println("Submit Failed")
+    }
   }
   
   override def postStop {

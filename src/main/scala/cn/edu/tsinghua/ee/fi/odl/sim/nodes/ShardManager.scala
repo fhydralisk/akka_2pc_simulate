@@ -37,6 +37,7 @@ class ShardManager extends EndActor with ActorLogging {
       
     case GetShardFactoryReply(config) =>
       shardFactoryPromise success new ShardFactory(config)
+      log.debug(s"shard factory constructed, config: $config")
       becomeInitialized
       
     case msg @ _ =>
@@ -48,8 +49,10 @@ class ShardManager extends EndActor with ActorLogging {
       // duplicated message, ignore
     case Deploy(shardName) =>
       // If there's already a shard with the given name, reply false. else reply true
+      
       val result = (shards filterKeys { _ == shardName } headOption) map {_ => false} getOrElse { 
         getShardFactory map { f => 
+          log.debug(s"Deploying shard $shardName")
           shards += shardName -> f.newShard(shardName, context)
           true 
           } getOrElse false 
