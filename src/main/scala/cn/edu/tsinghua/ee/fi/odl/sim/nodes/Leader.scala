@@ -2,6 +2,7 @@ package cn.edu.tsinghua.ee.fi.odl.sim.nodes
 
 import akka.actor.{Actor, ActorRef, ActorSelection, ActorLogging, Props}
 import akka.cluster.Cluster
+import akka.cluster.pubsub.{ DistributedPubSub, DistributedPubSubMediator }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory, ConfigValue}
@@ -32,11 +33,14 @@ class Leader extends Actor with ActorLogging {
   var shardConfigDispatcher : Option[ActorRef] = None
   var frontendConfigDispatcher : Option[ActorRef] = None
   var transactionIdDispatcher: Option[ActorRef] = None
+  var metricsActor: Option[ActorRef] = None
   
   override def preStart = {
     shardConfigDispatcher = Some(context.actorOf(ShardConfigDispatcher.props))
     transactionIdDispatcher = Some(context.actorOf(TransactionIDDispatcher.props))
     frontendConfigDispatcher = Some(context.actorOf(FrontendConfigDispatcher.props))
+    // TODO: Implement Metrics Recounter
+    // metricsActor = Some(context.actorOf(MetricsActor.props))
   }
   
   def receive = {
@@ -182,6 +186,12 @@ class TransactionIDDispatcher extends Actor with ActorLogging {
   }
 }
 
+
+object CanCommitProxy {
+  def props: Props = Props(new CanCommitProxy)
+}
+
+
 class CanCommitProxy extends Actor with ActorLogging {
   // TODO: Implement this proxy which can forward can-commit message to its destination
   override def receive = {
@@ -189,9 +199,3 @@ class CanCommitProxy extends Actor with ActorLogging {
   }
 }
 
-class MetricsActor extends Actor with ActorLogging {
-  // TODO: Implement this metrics actor to take the test meansurement
-  override def receive = {
-    case _ =>
-  }
-}

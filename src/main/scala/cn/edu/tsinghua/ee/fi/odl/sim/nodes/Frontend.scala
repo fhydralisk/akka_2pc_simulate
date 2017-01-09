@@ -33,8 +33,7 @@ class Frontend extends EndActor with ActorLogging {
   
   val getSettingsTickTask = context.system.scheduler.schedule(2 seconds, getSettingsTickTimeout, self, GetSettingsTick)
   
-  val mediator = DistributedPubSub(context.system).mediator
-  mediator ! Subscribe("dosubmit", self)
+  subscribe("dosubmit")
   
   def receive = uninitialized
   
@@ -60,6 +59,7 @@ class Frontend extends EndActor with ActorLogging {
     case GetDataBrokerReply(brokerConfig, cohortProxyConfig, shardDeployment) =>
       constructShardMap(shardDeployment)
       dataBrokerPromise success new FakeBroker(getNewTransactionId, new CohortProxyFactory(cohortProxyConfig), brokerConfig)
+      log.info("frontend has successfully created fake broker")
       becomeInitialized
     case SubscribeAck(Subscribe(topic, None, `self`)) =>
       log.info(s"Frontend has successfully subscribed topic $topic")
@@ -74,7 +74,7 @@ class Frontend extends EndActor with ActorLogging {
       // duplicated reply, ignore 
     case DoSubmit(config) =>
       // TODO: do submit here and reply metrics?
-      doSubmitTest
+      doSubmitTest(config)
     case m @ _ =>
       log.warning(s"unhandled message $m")
   }
@@ -95,6 +95,8 @@ class Frontend extends EndActor with ActorLogging {
     shardDeployment = Some(collection.immutable.HashMap[String, Set[String]](
     shardDeploymentConfig.root().toArray map { case (k, v) => (k, v.unwrapped().asInstanceOf[java.util.List[String]].toSet) }: _*
     ))
+    
+    log.info("frontend has successfully constructed shard map")
   }
   
   def getNewTransactionId = {
@@ -108,7 +110,8 @@ class Frontend extends EndActor with ActorLogging {
     } getOrElse (Future.failed(new NullPointerException))
   }
   
-  def doSubmitTest {
+  def doSubmitTest(config: Config) {
+    log.info(s"start submit test with config: $config")
     val broker = dataBrokerPromise.future.value.get.get
     val trans = broker.newTransaction
     trans map { t =>
@@ -117,8 +120,8 @@ class Frontend extends EndActor with ActorLogging {
       t.submit()
     } map { _ =>
       println("Submit OK")
-    } recover { case _ =>
-      println("Submit Failed")
+    } recover { case e @ _ =>
+      println(s"Submit Failed, expection: $e")
     }
   }
   

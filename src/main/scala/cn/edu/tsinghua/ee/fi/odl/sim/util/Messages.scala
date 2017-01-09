@@ -22,3 +22,31 @@ object FrontendMessages {
   case class DoSubmit(submitConfig: Config)
   case class SubmitMetrics() //TODO: Parameters here
 }
+
+object MetricsMessages {
+  trait MetricsResult
+  
+  case class ReadyMetrics()
+  case class ReadyMetricsReply(ready: Boolean)
+  case class FinishMetrics()
+  case class FinishMetricsReply(result: MetricsResult)
+  case class MetricsElement(transId: Int, timestamp: Long, process: CommitPhase.CommitPhase)
+  
+  object CommitPhase {
+  /*
+   * CommitPhase(phase)
+   * phase:
+   * 1 - can-commit - frontend -> backend
+   * 2 - can-commit-received - backend -> frontend
+   * 3 - pre-commit - frontend -> backend
+   * 4 - pre-commit-received - backend -> frontend
+   * 5 - commited - frontend
+   */
+    case class CommitPhase(phase: Int)
+    val CAN_COMMIT = 1
+    val CAN_COMMIT_REPLIED = 2
+    val PRE_COMMIT = 3
+    val PRE_COMMIT_REPLIED = 4
+    val COMMITED = 5
+  }
+}
