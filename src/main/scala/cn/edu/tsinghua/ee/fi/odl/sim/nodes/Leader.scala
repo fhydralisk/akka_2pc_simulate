@@ -158,9 +158,10 @@ object FrontendConfigDispatcher {
 
 
 class FrontendConfigDispatcher extends Actor with ActorLogging {
+  import LeaderConfiguration._
   def receive = {
     case GetDataBroker() =>
-      sender ! GetDataBrokerReply(LeaderConfiguration.brokerConfig, LeaderConfiguration.cohortProxyConfig)
+      sender ! GetDataBrokerReply(brokerConfig, cohortProxyConfig, shardDeployConfig)
   }
 }
 

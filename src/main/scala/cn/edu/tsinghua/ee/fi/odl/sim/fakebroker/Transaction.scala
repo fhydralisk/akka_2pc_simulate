@@ -1,7 +1,6 @@
 package cn.edu.tsinghua.ee.fi.odl.sim.fakebroker
 
 import collection.mutable.HashMap
-import akka.actor.ActorRef
 import concurrent.Future
 import cn.edu.tsinghua.ee.fi.odl.sim.fakedatatree.Modification
 
@@ -9,7 +8,7 @@ trait Transaction {
   val transId : Int
   def submit() : Future[Null]
   // FIXME: prefer shard rather than actorref
-  def put(dest: ActorRef) : Unit //Fake put, ignore the parameter
+  def put(path: String, value: String) : Unit //Fake put, ignore the parameter
   def modification : Modification
 }
 
@@ -30,9 +29,9 @@ object Transaction {
 }
 
 class TransactionProxy(val transId: Int, delegate: TransactionFactory) extends Transaction {
-  val subTransactions = new HashMap[ActorRef, Transaction]
+  val subTransactions = new HashMap[String, Transaction]
   
-  def put(dest: ActorRef) {
+  def put(dest: String, value: String) {
     subTransactions += dest -> new WriteTransaction(transId)
   }
   
@@ -49,7 +48,7 @@ class WriteTransaction(val transId: Int) extends Transaction {
     Future.failed[Null](new NoSuchMethodException())
   }
   
-  def put(dest: ActorRef) {
+  def put(dest: String, value: String) {
     
   }
   

@@ -6,7 +6,7 @@ import concurrent.duration._
 import com.typesafe.config.Config
 import akka.pattern.ask
 import akka.util.Timeout
-import akka.actor.ActorRef
+import akka.actor.ActorSelection
 import collection.immutable.TreeMap
 
 
@@ -15,7 +15,7 @@ trait CohortProxy {
 }
 
 
-class CohortProxyFactory(config: Config) {
+class CohortProxyFactory(config: Config)(implicit shardGetter: String => ActorSelection) {
   def getCohortProxy(txn: Transaction) : Option[CohortProxy] = {
     config.getString("cohort-proxy-type") match {
       case "SyncCohortProxy" =>
@@ -31,12 +31,13 @@ class CohortProxyFactory(config: Config) {
 }
 
 
-abstract class AbstractCohortProxy extends CohortProxy {
+abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSelection) extends CohortProxy {
   
   implicit val timeout : Timeout = 2 seconds
   val txn: Transaction
   
   def submit() = {
+    // TODO: Check shard is available here
     val txns = txn.asInstanceOf[TransactionProxy]
     val commitResultPromise = Promise[Null]()
     
@@ -54,7 +55,9 @@ abstract class AbstractCohortProxy extends CohortProxy {
     import CommitMessages._
     import concurrent.ExecutionContext.Implicits.global
     val replies = txns.subTransactions map {
-      d => d._1 ? CommitMessage(d._2)
+      //d => d._1 ? CommitMessage(d._2)
+      // If path cannot be translate to ActorSelection, It shall failed here and enter abort process
+      d => ask(d._1, CommitMessage(d._2))
     }
     
     Future.sequence(replies).transform(
@@ -63,7 +66,7 @@ abstract class AbstractCohortProxy extends CohortProxy {
         )
   }  
   
-  def invokeCanCommit(shard: ActorRef, txn: Transaction) = {
+  def invokeCanCommit(shard: ActorSelection, txn: Transaction) = {
     import CommitMessages._
     import concurrent.ExecutionContext.Implicits.global
     
@@ -78,7 +81,8 @@ abstract class AbstractCohortProxy extends CohortProxy {
 }
 
 
-class SyncCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
+class SyncCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection) 
+  extends AbstractCohortProxy {
   
   def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[Null]) {
     import concurrent.ExecutionContext.Implicits.global
@@ -94,7 +98,8 @@ class SyncCohortProxy(override val txn: Transaction) extends AbstractCohortProxy
 }
 
 
-class ForwardCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
+class ForwardCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection) 
+  extends AbstractCohortProxy {
   //TODO: Implement this
   def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[Null]) {
     
@@ -102,14 +107,15 @@ class ForwardCohortProxy(override val txn: Transaction) extends AbstractCohortPr
 }
 
 
-class ConcurrentCohortProxy(override val txn: Transaction) extends AbstractCohortProxy {
+class ConcurrentCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection) 
+  extends AbstractCohortProxy {
   
   def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[Null]) = {
     import concurrent.ExecutionContext.Implicits.global
     import CommitMessages._
     
     val replies = txns.subTransactions map {
-      invokeCanCommit _ tupled
+      s => invokeCanCommit(s._1, s._2)
     }
     
     Future.sequence(replies).transform(

@@ -18,7 +18,7 @@ object TransactionMessages {
 
 object FrontendMessages {
   case class GetDataBroker()
-  case class GetDataBrokerReply(brokerConfig: Config, cohortProxyConfig: Config)
+  case class GetDataBrokerReply(brokerConfig: Config, cohortProxyConfig: Config, shardDeployment: Config)
   case class DoSubmit(submitConfig: Config)
   case class SubmitMetrics() //TODO: Parameters here
 }
