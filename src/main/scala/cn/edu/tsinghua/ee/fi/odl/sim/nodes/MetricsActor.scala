@@ -4,10 +4,11 @@ package cn.edu.tsinghua.ee.fi.odl.sim.nodes
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.cluster.pubsub.{ DistributedPubSubMediator, DistributedPubSub }
 import cn.edu.tsinghua.ee.fi.odl.sim.util.MetricsMessages._
+import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitPhase
 
 
 object MetricsActor {
-  type MutableMetricsContainer = collection.mutable.Buffer[(Int, Long, CommitPhase.CommitPhase)]
+  type MutableMetricsContainer = collection.mutable.Buffer[(Int, String, Long, CommitPhase.CommitPhase)]
   
   trait MetricsRecounter {
     def recount(container: MutableMetricsContainer): MetricsResult
@@ -26,7 +27,7 @@ class MetricsActor(metricsRecounter: MetricsActor.MetricsRecounter) extends Acto
   val mediator = DistributedPubSub(context.system).mediator
   mediator ! Subscribe("metrics", self)
   
-  val metricsContainer: MutableMetricsContainer = collection.mutable.ListBuffer[(Int, Long, CommitPhase.CommitPhase)]()
+  val metricsContainer: MutableMetricsContainer = collection.mutable.ListBuffer[(Int, String, Long, CommitPhase.CommitPhase)]()
   
   override def receive = {
     case SubscribeAck(Subscribe("metrics", None, `self`)) =>
@@ -36,8 +37,8 @@ class MetricsActor(metricsRecounter: MetricsActor.MetricsRecounter) extends Acto
       sender ! ReadyMetricsReply(true)
     case FinishMetrics() =>
       sender ! FinishMetricsReply(metricsRecounter.recount(metricsContainer))
-    case MetricsElement(transId, timestamp, process) =>
-      metricsContainer += Tuple3(transId, timestamp, process)
+    case MetricsElement(transId, shard, timestamp, process) =>
+      metricsContainer += Tuple4(transId, shard, timestamp, process)
     case m @ _ =>
       log.debug(s"unhandled message $m")
   }

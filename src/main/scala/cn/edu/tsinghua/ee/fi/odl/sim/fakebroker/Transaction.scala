@@ -4,9 +4,11 @@ import collection.mutable.HashMap
 import concurrent.Future
 import cn.edu.tsinghua.ee.fi.odl.sim.fakedatatree.Modification
 
+
 trait Transaction {
+  
   val transId : Int
-  def submit() : Future[Null]
+  def submit() : Future[Transaction.SubmitResult]
   // FIXME: prefer shard rather than actorref
   def put(path: String, value: String) : Unit //Fake put, ignore the parameter
   def modification : Modification
@@ -17,10 +19,11 @@ trait DataBroker {
 }
 
 trait TransactionFactory {
-  def submit(txn: Transaction): Future[Null]
+  def submit(txn: Transaction): Future[Transaction.SubmitResult]
 }
 
 object Transaction {
+  type SubmitResult = ThreePhaseMetrics
   implicit object TransactionOrdering extends Ordering[Transaction] {
     def compare(thisTrans: Transaction, thatTrans: Transaction) = {
       thisTrans.transId - thatTrans.transId
