@@ -45,7 +45,7 @@ class TransactionProxy(val transId: Int, delegate: TransactionFactory) extends T
   def modification = null
 }
 
-class WriteTransaction(val transId: Int) extends Transaction {
+case class WriteTransaction(val transId: Int) extends Transaction {
   
   def submit() = {
     Future.failed[Null](new NoSuchMethodException())
