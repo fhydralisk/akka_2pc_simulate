@@ -3,6 +3,7 @@ package cn.edu.tsinghua.ee.fi.odl.sim.fakebroker
 
 trait ThreePhaseMetrics {
   def phaseTimestamp: Int => Long
+  def phaseToTimestamp: Map[Int, Long]
 }
 
 
@@ -17,6 +18,8 @@ private class ThreePhaseMetricsImpl extends ThreePhaseMetrics with ThreePhaseMet
   }
   
   def phaseTimestamp = metricsContainer.get(_).get
+  
+  def phaseToTimestamp = metricsContainer.toMap
 }
 
 

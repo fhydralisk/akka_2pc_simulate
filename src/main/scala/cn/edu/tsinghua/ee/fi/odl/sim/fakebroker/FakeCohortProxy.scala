@@ -77,6 +77,8 @@ abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSele
     import CommitMessages._
     import concurrent.ExecutionContext.Implicits.global
     
+    println(s"asking shard $shard can-commit")
+    
     (shard ? CanCommitMessage(txn)).transform({
       case _: CanCommitNack => 
         throw Exceptions.CanCommitFailedException

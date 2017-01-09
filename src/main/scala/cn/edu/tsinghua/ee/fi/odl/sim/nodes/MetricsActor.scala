@@ -8,7 +8,7 @@ import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitPhase
 
 
 object MetricsActor {
-  type MutableMetricsContainer = collection.mutable.Buffer[(Int, String, Long, CommitPhase.CommitPhase)]
+  type MutableMetricsContainer = collection.mutable.Buffer[(Int, Long, CommitPhase.CommitPhase)]
   
   trait MetricsRecounter {
     def recount(container: MutableMetricsContainer): MetricsResult
@@ -27,7 +27,7 @@ class MetricsActor(metricsRecounter: MetricsActor.MetricsRecounter) extends Acto
   val mediator = DistributedPubSub(context.system).mediator
   mediator ! Subscribe("metrics", self)
   
-  val metricsContainer: MutableMetricsContainer = collection.mutable.ListBuffer[(Int, String, Long, CommitPhase.CommitPhase)]()
+  val metricsContainer: MutableMetricsContainer = collection.mutable.ListBuffer[(Int, Long, CommitPhase.CommitPhase)]()
   
   override def receive = {
     case SubscribeAck(Subscribe("metrics", None, `self`)) =>
@@ -37,9 +37,19 @@ class MetricsActor(metricsRecounter: MetricsActor.MetricsRecounter) extends Acto
       sender ! ReadyMetricsReply(true)
     case FinishMetrics() =>
       sender ! FinishMetricsReply(metricsRecounter.recount(metricsContainer))
-    case MetricsElement(transId, shard, timestamp, process) =>
-      metricsContainer += Tuple4(transId, shard, timestamp, process)
+    case MetricsElement(transId, timestamp, process) =>
+      val e = Tuple3(transId, timestamp, process)
+      log.debug(s"element fetch: $e")
+      metricsContainer += e
     case m @ _ =>
       log.debug(s"unhandled message $m")
+  }
+}
+
+import MetricsActor.{MetricsRecounter, MutableMetricsContainer}
+
+class EmptyRecounter extends MetricsRecounter {
+  def recount(container: MutableMetricsContainer): MetricsResult = {
+    return null
   }
 }

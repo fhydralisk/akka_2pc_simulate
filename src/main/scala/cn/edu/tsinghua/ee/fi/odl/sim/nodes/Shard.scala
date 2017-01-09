@@ -92,6 +92,7 @@ abstract class AbstractShard(
     val valid = validateTransaction(txn)
     replyCanCommit(txn, senderOfTxn)(valid)
     if (valid) processingTransaction = Some(txn -> abortWhenTimeoutTask)
+    log.debug(s"can-commit replied: $valid")
     valid
   }
   
@@ -108,6 +109,7 @@ abstract class AbstractShard(
     senderOfTxn ! (processingTransaction.filter { _._1.transId == txn.transId } match {
       case Some(_) =>
         dataTree.applyModification(txn.modification)
+        log.debug(s"commit replied")
         CommitAck(txn.transId)
       case None => 
         CommitNack(txn.transId)
