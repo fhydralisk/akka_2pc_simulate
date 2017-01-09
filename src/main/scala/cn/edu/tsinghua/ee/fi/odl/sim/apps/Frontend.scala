@@ -16,7 +16,7 @@ import cn.edu.tsinghua.ee.fi.odl.sim.nodes.Frontend
  */
 object FrontendApp {
   def main(args: Array[String]) {
-    val frontendConfig = ConfigFactory.load("frontend.conf").withFallback(ConfigFactory.parseString("akka.cluster.roles=[\"frontend\"]"))
+    val frontendConfig = ConfigFactory.parseResources("frontend.conf").withFallback(ConfigFactory.parseString("akka.cluster.roles=[\"frontend\"]"))
     val system = AkkaSystem.createSystem(Some(frontendConfig))
     system.actorOf(Frontend.props, name="frontend")
   }

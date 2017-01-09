@@ -12,7 +12,7 @@ object BackendApp {
   def main(args: Array[String]) {
     
     val argsToRoles = if (args.isEmpty) "" else (("\"" + args.head + "\"") /: args.tail) { (s, e) => s + ", \"" + e + "\"" }
-    val backendConfig = ConfigFactory.load("backend.conf").withFallback(ConfigFactory.parseString(s"akka.cluster.roles=[$argsToRoles]"))
+    val backendConfig = ConfigFactory.parseResources("backend.conf").withFallback(ConfigFactory.parseString(s"akka.cluster.roles=[$argsToRoles]"))
     val system = AkkaSystem.createSystem(Some(backendConfig))
     val cluster = Cluster(system)
     cluster registerOnMemberUp {

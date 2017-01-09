@@ -8,7 +8,8 @@ import com.typesafe.config.{ Config, ConfigFactory }
 object AkkaSystem {
   val systemName = "OdlSimulationSystem"
   def createSystem(specialConfig : Option[Config] = None) = {
-    val config = specialConfig map { ConfigFactory.load() withFallback } getOrElse(ConfigFactory.load())
+    val commonConfig = ConfigFactory.load()
+    val config = specialConfig map { _ withFallback commonConfig} getOrElse(commonConfig)
     ActorSystem(systemName, config)
   }
   
