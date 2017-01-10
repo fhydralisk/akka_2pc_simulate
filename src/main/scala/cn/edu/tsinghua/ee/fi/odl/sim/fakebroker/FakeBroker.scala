@@ -1,13 +1,16 @@
 package cn.edu.tsinghua.ee.fi.odl.sim.fakebroker
 
-import akka.actor.ActorRef
+import akka.actor.{ActorSystem, ActorRef}
+import akka.event.Logging
 import com.typesafe.config.Config
 
 import concurrent.Future
 
 
-class FakeBroker(txnIdGetter: => Future[Int], cohortProxyFactory: CohortProxyFactory, settings: Config) 
+class FakeBroker(txnIdGetter: => Future[Int], cohortProxyFactory: CohortProxyFactory, settings: Config)(implicit akkaSystem: ActorSystem)
   extends DataBroker with TransactionFactory {
+  
+  val log = Logging(akkaSystem, this.getClass)
   
   override def newTransaction() = {
     import concurrent.ExecutionContext.Implicits.global 
