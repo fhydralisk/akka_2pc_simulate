@@ -116,6 +116,7 @@ class Frontend extends EndActor with ActorLogging {
     import cn.edu.tsinghua.ee.fi.odl.sim.util.MetricsMessages._
     log.info(s"start submit test with config: $config")
     val broker = dataBrokerPromise.future.value.get.get
+    
     for (x <- 1 to 10) {
       val trans = broker.newTransaction
       trans flatMap { t =>
