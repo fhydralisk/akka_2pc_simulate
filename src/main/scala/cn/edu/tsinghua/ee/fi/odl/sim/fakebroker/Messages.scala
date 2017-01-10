@@ -9,4 +9,7 @@ object CommitMessages {
   final case class CanCommitNack(txnId: Int)
   final case class CommitAck(txnId: Int)
   final case class CommitNack(txnId: Int)
+  
+  // for Forward Cohort Proxy
+  final case class ForwardCanCommit(txn: Transaction)
 }
