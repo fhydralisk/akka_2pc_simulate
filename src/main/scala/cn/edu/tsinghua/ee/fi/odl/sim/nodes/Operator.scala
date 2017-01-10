@@ -18,7 +18,6 @@ class Operator(submitConfig: Config) extends EndActor with ActorLogging {
   context.system.scheduler.scheduleOnce(20 seconds) {
     log.info("trying to get metrics module ready")
     publish("metrics", ReadyMetrics())
-    //publish("dosubmit", DoSubmit(submitConfig)) //FIXME: WTF? NOTWORK?
   }
   
   lazy val metricsDuration = submitConfig.getDuration("metrics.duration")
@@ -30,7 +29,7 @@ class Operator(submitConfig: Config) extends EndActor with ActorLogging {
       publish("dosubmit", DoSubmit(submitConfig))
       context.system.scheduler.scheduleOnce(metricsDuration, sender, FinishMetrics())
     case FinishMetricsReply(metrics) =>
-      log.info(s"metrics result is ${metrics.result}")
+      log.info(s"metrics result is ${metrics}")
       
     case _ =>
   }

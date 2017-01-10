@@ -20,13 +20,11 @@ object FrontendMessages {
   case class GetDataBroker()
   case class GetDataBrokerReply(brokerConfig: Config, cohortProxyConfig: Config, shardDeployment: Config)
   case class DoSubmit(submitConfig: Config)
-  case class SubmitMetrics() //TODO: Parameters here
 }
 
 object MetricsMessages {
-  trait MetricsResult[T] {
-    def result : java.util.Map[String, T]
-  }
+  
+  type MetricsResult[T] = Map[String, T]
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitPhase
   implicit def Int2CommitPhase: Int => CommitPhase.CommitPhase = CommitPhase.CommitPhase(_)
   

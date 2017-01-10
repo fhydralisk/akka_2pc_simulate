@@ -21,7 +21,6 @@ object MetricsActor {
 
 class MetricsActor[T](metricsRecounter: MetricsActor.MetricsRecounter[T]) extends Actor with ActorLogging {
   
-  // TODO: Implement this metrics actor to take the test meansurement
   import MetricsActor._
   import DistributedPubSubMediator.{Subscribe, SubscribeAck}
   
@@ -61,10 +60,7 @@ class EmptyRecounter extends MetricsRecounter[Any] {
 
 class TwoPhaseRecounter extends MetricsRecounter[Long] {
   import CommitPhase._
-  
-  case class TwoPhaseResult(ret: java.util.Map[String, Long]) extends MetricsResult[Long] {
-    def result = ret
-  }
+ 
   
   def recount(container: MutableMetricsContainer): MetricsResult[Long] = {
     // map1: transId -> { phase -> timestamp }
@@ -84,9 +80,7 @@ class TwoPhaseRecounter extends MetricsRecounter[Long] {
         r map { case (k, v) => k -> (v + e._2(k) / 1000) }
       } map { case (k, v) => k -> (v / map2.size) }
       
-      // FIXME: Cannot Serialize
-      import collection.JavaConversions._
-      TwoPhaseResult(new java.util.HashMap[String, Long](result))
+      result
     }
   }
 }
