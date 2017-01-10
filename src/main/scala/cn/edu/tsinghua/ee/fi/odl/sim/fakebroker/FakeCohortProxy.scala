@@ -74,11 +74,12 @@ abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSele
         _ => {metrics.testPoint(CommitPhase.COMMITED); commitResultPromise success metrics.asInstanceOf[ThreePhaseMetrics]}, 
         f => { commitResultPromise failure Exceptions.CommitTimeoutException; f }
         )
-  }  
+  }
+  
+  import CommitMessages._
+  import concurrent.ExecutionContext.Implicits.global
   
   protected def invokeCanCommit(shard: ActorSelection, txn: Transaction) = {
-    import CommitMessages._
-    import concurrent.ExecutionContext.Implicits.global
     
     log.debug(s"asking shard $shard can-commit")
     
@@ -87,8 +88,14 @@ abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSele
         throw Exceptions.CanCommitFailedException
       case s @ _ =>
         s
-    }, f => f);
-    // TODO: Abort shall be taken care here
+    }, f => f)
+  }
+  
+  protected def invokeAbort(shard: ActorSelection, txn: Transaction) = {
+    log.debug(s"aborting shard $shard")
+    
+    shard ! AbortMessage(txn)
+    
   }
 }
 
@@ -104,7 +111,9 @@ class SyncCohortProxy(override val txn: Transaction)(implicit shardGetter: Strin
     var queue = Future[Any]{}
     for ( d <- sortedTxns ) queue = queue flatMap { _ => invokeCanCommit(d._1, d._2) }
     queue map { _ => doPreCommit(txns, commitResultPromise) } recover { 
-      case exp @ _ => commitResultPromise failure exp 
+      case exp @ _ => 
+        commitResultPromise failure exp
+        sortedTxns foreach { t => invokeAbort(t._1, t._2) }
     }
   }
 }

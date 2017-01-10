@@ -9,13 +9,14 @@ import akka.util.Timeout
 import com.typesafe.config.Config
 import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.{DataBroker, FakeBroker, CohortProxyFactory}
 
+
 object Frontend {
   object GetSettingsTick
   
   def props: Props = Props(new Frontend)
 }
 
-//TODO: metrics here
+
 class Frontend extends EndActor with ActorLogging {
   import Frontend._
   import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages._
@@ -75,7 +76,6 @@ class Frontend extends EndActor with ActorLogging {
     case _ : GetDataBrokerReply =>
       // duplicated reply, ignore 
     case DoSubmit(config) =>
-      // TODO: do submit here and reply metrics?
       doSubmitTest(config)
     case m @ _ =>
       log.warning(s"unhandled message $m")

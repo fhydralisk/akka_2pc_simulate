@@ -80,6 +80,7 @@ abstract class AbstractShard(
           log.debug("ignoring abort message due to not processing this transaction")
         case Some(_) =>
           finishCanCommit
+          log.info(s"aborting transaction $txn due to timeout")
           finishCommit
       }
   }
