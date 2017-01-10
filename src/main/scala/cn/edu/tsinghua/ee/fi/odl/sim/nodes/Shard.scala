@@ -8,6 +8,8 @@ import cn.edu.tsinghua.ee.fi.odl.sim.util.{QueueWrapper, TreeSetWrapper}
 import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.Transaction
 import cn.edu.tsinghua.ee.fi.odl.sim.fakedatatree._
 import concurrent.duration._
+import cn.edu.tsinghua.ee.fi.odl.sim.fakedatatree.FakeDataTree
+import cn.edu.tsinghua.ee.fi.odl.sim.fakedatatree.DataTree
 
 
 trait Shard extends Actor

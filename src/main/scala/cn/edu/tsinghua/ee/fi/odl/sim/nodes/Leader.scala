@@ -40,7 +40,7 @@ class Leader extends Actor with ActorLogging {
     transactionIdDispatcher = Some(context.actorOf(TransactionIDDispatcher.props))
     frontendConfigDispatcher = Some(context.actorOf(FrontendConfigDispatcher.props))
     // TODO: Implement Metrics Recounter
-    metricsActor = Some(context.actorOf(MetricsActor.props(new EmptyRecounter)))
+    metricsActor = Some(context.actorOf(MetricsActor.props(new TwoPhaseRecounter)))
   }
   
   def receive = {

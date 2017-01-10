@@ -24,13 +24,15 @@ object FrontendMessages {
 }
 
 object MetricsMessages {
-  trait MetricsResult
+  trait MetricsResult[T] {
+    def result : java.util.Map[String, T]
+  }
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitPhase
   implicit def Int2CommitPhase: Int => CommitPhase.CommitPhase = CommitPhase.CommitPhase(_)
   
   case class ReadyMetrics()
   case class ReadyMetricsReply(ready: Boolean)
   case class FinishMetrics()
-  case class FinishMetricsReply(result: MetricsResult)
+  case class FinishMetricsReply[T](result: MetricsResult[T])
   case class MetricsElement(transId: Int, timestamp: Long, process: CommitPhase.CommitPhase)
 }

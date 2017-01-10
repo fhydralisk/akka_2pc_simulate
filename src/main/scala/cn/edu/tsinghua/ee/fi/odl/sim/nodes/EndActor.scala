@@ -20,7 +20,7 @@ abstract class EndActor extends Actor {
   
   protected def leaderActorPath = leaderAddress map { leaderActorOfAddress }
   
-  lazy val mediator = DistributedPubSub(context.system).mediator
+  val mediator = DistributedPubSub(context.system).mediator
   
   protected def subscribe(topic: String) {
     mediator ! Subscribe(topic, self)
