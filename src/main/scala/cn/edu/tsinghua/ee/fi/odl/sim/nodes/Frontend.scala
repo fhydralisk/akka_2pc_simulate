@@ -36,6 +36,8 @@ class Frontend extends EndActor with ActorLogging {
   
   def receive = uninitialized
   
+  implicit val akkaSystem = context.system
+  
   /*
    * Implicit conversion from shard name to actor selection
    */
@@ -114,11 +116,12 @@ class Frontend extends EndActor with ActorLogging {
     import cn.edu.tsinghua.ee.fi.odl.sim.util.MetricsMessages._
     log.info(s"start submit test with config: $config")
     val broker = dataBrokerPromise.future.value.get.get
-    for (x <- 1 to 100) {
+    for (x <- 1 to 10) {
       val trans = broker.newTransaction
       trans flatMap { t =>
         t.put("shard1", "")
         t.put("shard2", "")
+        log.debug(s"submitting txn-${t.transId}")
         t.submit() map { t.transId -> _ }
       } map { case (transId, metrics) =>
         println("Submit OK")

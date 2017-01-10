@@ -6,7 +6,8 @@ import concurrent.duration._
 import com.typesafe.config.Config
 import akka.pattern.ask
 import akka.util.Timeout
-import akka.actor.ActorSelection
+import akka.event.Logging
+import akka.actor.{ActorSystem, ActorSelection}
 import collection.immutable.TreeMap
 import Transaction.SubmitResult
 
@@ -16,7 +17,7 @@ trait CohortProxy {
 }
 
 
-class CohortProxyFactory(config: Config)(implicit shardGetter: String => ActorSelection) {
+class CohortProxyFactory(config: Config)(implicit shardGetter: String => ActorSelection, akkaSystem: ActorSystem) {
   def getCohortProxy(txn: Transaction) : Option[CohortProxy] = {
     config.getString("cohort-proxy-type") match {
       case "SyncCohortProxy" =>
@@ -32,12 +33,14 @@ class CohortProxyFactory(config: Config)(implicit shardGetter: String => ActorSe
 }
 
 
-abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSelection) extends CohortProxy {
+abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSelection, akkaSystem: ActorSystem) extends CohortProxy {
   
   implicit val timeout : Timeout = 2 seconds
   protected val txn: Transaction
   
   protected val metrics: ThreePhaseMetricsTesting = new ThreePhaseMetricsImpl
+  
+  val log = Logging(akkaSystem, this.getClass)
   
   def submit() = {
     // TODO: Check shard is available here
@@ -77,7 +80,7 @@ abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSele
     import CommitMessages._
     import concurrent.ExecutionContext.Implicits.global
     
-    println(s"asking shard $shard can-commit")
+    log.debug(s"asking shard $shard can-commit")
     
     (shard ? CanCommitMessage(txn)).transform({
       case _: CanCommitNack => 
@@ -90,7 +93,7 @@ abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSele
 }
 
 
-class SyncCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection) 
+class SyncCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection, akkaSystem: ActorSystem) 
   extends AbstractCohortProxy {
   
   protected def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) {
@@ -107,7 +110,7 @@ class SyncCohortProxy(override val txn: Transaction)(implicit shardGetter: Strin
 }
 
 
-class ForwardCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection) 
+class ForwardCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection, akkaSystem: ActorSystem) 
   extends AbstractCohortProxy {
   //TODO: Implement this
   protected def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) {
@@ -116,7 +119,7 @@ class ForwardCohortProxy(override val txn: Transaction)(implicit shardGetter: St
 }
 
 
-class ConcurrentCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection) 
+class ConcurrentCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection, akkaSystem: ActorSystem) 
   extends AbstractCohortProxy {
   
   protected def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) = {
