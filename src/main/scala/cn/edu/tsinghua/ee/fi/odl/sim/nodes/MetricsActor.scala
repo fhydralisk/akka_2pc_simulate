@@ -9,7 +9,7 @@ import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitPhase
 
 object MetricsActor {
   // transid, timestamp, commitphase
-  type MutableMetricsContainer = collection.mutable.Buffer[(Int, Long, CommitPhase.CommitPhase)]
+  type MutableMetricsContainer = collection.mutable.Buffer[(Int, Long, CommitPhase.CommitPhase, Long)]
   
   trait MetricsRecounter[T] {
     def recount(container: MutableMetricsContainer): MetricsResult[T]
@@ -27,7 +27,7 @@ class MetricsActor[T](metricsRecounter: MetricsActor.MetricsRecounter[T]) extend
   val mediator = DistributedPubSub(context.system).mediator
   mediator ! Subscribe("metrics", self)
   
-  val metricsContainer: MutableMetricsContainer = collection.mutable.ListBuffer[(Int, Long, CommitPhase.CommitPhase)]()
+  val metricsContainer: MutableMetricsContainer = collection.mutable.ListBuffer[(Int, Long, CommitPhase.CommitPhase, Long)]()
   
   override def receive = {
     case SubscribeAck(Subscribe("metrics", None, `self`)) =>
@@ -39,7 +39,7 @@ class MetricsActor[T](metricsRecounter: MetricsActor.MetricsRecounter[T]) extend
     case FinishMetrics() =>
       sender ! FinishMetricsReply(metricsRecounter.recount(metricsContainer))
     case MetricsElement(transId, timestamp, process) =>
-      val e = Tuple3(transId, timestamp, process)
+      val e = Tuple4(transId, timestamp, process, System.nanoTime())
       log.debug(s"element fetch: $e")
       metricsContainer += e
     case m @ _ =>
@@ -61,12 +61,12 @@ class EmptyRecounter extends MetricsRecounter[Any] {
 class TwoPhaseRecounter extends MetricsRecounter[Long] {
   import CommitPhase._
  
-  
   def recount(container: MutableMetricsContainer): MetricsResult[Long] = {
-    // map1: transId -> { phase -> timestamp }
+    
     if (container.isEmpty) {
       null
     } else {
+      // map1: transId -> { phase -> timestamp }
       val map1 = container groupBy(_._1) filter (_._2.size == 3) map (e => e._1 -> (e._2 map { t => t._3.phase -> t._2 } toMap) )
       // map2: transId -> { phase -> duration }
       val map2 = map1 map { e => 
@@ -76,11 +76,22 @@ class TwoPhaseRecounter extends MetricsRecounter[Long] {
             )
       }
       
-      val result = ((map2.head._2 map { case (k, v) => k -> v / 1000 }) /: map2.tail) { (r, e) =>
+      val resultPhase = ((map2.head._2 map { case (k, v) => k -> v / 1000 }) /: map2.tail) { (r, e) =>
         r map { case (k, v) => k -> (v + e._2(k) / 1000) }
       } map { case (k, v) => k -> (v / map2.size) }
       
-      result
+      if (map2.size > 1) {
+        /* Throughput meter. 
+         * Set a timer t0 when first element arrives as well as another timer t1 that records time of the end element.
+         * Se stands for sum of elements
+         * Then Throughput shall be Se / (t1 - t0)
+         */
+
+        val resultThroughput = "Throughput" -> ((map2.size * 1000) / ((container.last._4 - container.head._4) / 1000000))
+        resultPhase + resultThroughput
+      } else {
+        resultPhase
+      }
     }
   }
 }

@@ -89,7 +89,7 @@ abstract class AbstractShard(
   
   protected def doCanCommit(txn: Transaction, senderOfTxn: ActorRef): Boolean = {
     // Timeout here
-    import concurrent.ExecutionContext.Implicits.global
+    import context.dispatcher
     val abortWhenTimeoutTask = context.system.scheduler.scheduleOnce(canCommitTimeout, self, AbortMessage(txn))
     
     val valid = validateTransaction(txn)

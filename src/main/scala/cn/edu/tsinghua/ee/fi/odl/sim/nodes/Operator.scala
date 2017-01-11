@@ -14,7 +14,7 @@ class Operator(submitConfig: Config) extends EndActor with ActorLogging {
   import cn.edu.tsinghua.ee.fi.odl.sim.util.MetricsMessages._
   import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages.DoSubmit
   
-  import concurrent.ExecutionContext.Implicits.global
+  import context.dispatcher
   context.system.scheduler.scheduleOnce(20 seconds) {
     log.info("trying to get metrics module ready")
     publish("metrics", ReadyMetrics())
@@ -26,7 +26,7 @@ class Operator(submitConfig: Config) extends EndActor with ActorLogging {
   def receive = {
     case ReadyMetricsReply(true) =>
       log.info(s"inform frontends to submit, metrics will be end in $metricsDuration")
-      publish("dosubmit", DoSubmit(submitConfig))
+      publish("dosubmit", DoSubmit(submitConfig.getConfig("submit")))
       context.system.scheduler.scheduleOnce(metricsDuration, sender, FinishMetrics())
     case FinishMetricsReply(metrics) =>
       log.info(s"metrics result is ${metrics}")

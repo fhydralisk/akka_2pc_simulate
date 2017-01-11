@@ -20,7 +20,7 @@ class ShardManager extends EndActor with ActorLogging {
   import ShardManagerMessages._
   import ShardManager._
   
-  import concurrent.ExecutionContext.Implicits.global
+  import context.dispatcher
   
   private val shardFactoryPromise = Promise[ShardFactory]()
   val shards = HashMap[String, ActorRef]()
@@ -75,7 +75,7 @@ class ShardManager extends EndActor with ActorLogging {
   
   private def tryGetFactory {
     //Send GetShardFactory Message to "Leader"
-    leaderActorPath foreach {
+    NodeGetter.LeaderGetter.leaderActorPath foreach {
       context.actorSelection(_) ! GetShardFactory()
     }
   }

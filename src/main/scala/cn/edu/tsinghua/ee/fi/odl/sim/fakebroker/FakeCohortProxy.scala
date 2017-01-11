@@ -60,7 +60,7 @@ abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSele
   
   protected def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult])
   
-  protected def doPreCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) = {
+  protected def doPreCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) {
     import concurrent.ExecutionContext.Implicits.global
     
     metrics.testPoint(CommitPhase.PRE_COMMIT)
@@ -118,6 +118,24 @@ class SyncCohortProxy(override val txn: Transaction)(implicit shardGetter: Strin
 }
 
 
+class ConcurrentCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection, akkaSystem: ActorSystem) 
+  extends AbstractCohortProxy {
+  
+  protected def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) = {
+    import concurrent.ExecutionContext.Implicits.global
+    
+    val replies = txns.subTransactions map {
+      s => invokeCanCommit(s._1, s._2)
+    }
+    
+    Future.sequence(replies).transform(
+        _ => doPreCommit(txns, commitResultPromise), 
+        f => { commitResultPromise.failure(f); f }
+        )
+  }
+}
+
+
 class ForwardCohortProxy(override val txn: Transaction, proxyPostfix: String)(implicit shardGetter: String => ActorSelection, akkaSystem: ActorSystem) 
   extends AbstractCohortProxy {
     
@@ -128,6 +146,8 @@ class ForwardCohortProxy(override val txn: Transaction, proxyPostfix: String)(im
   def addressesOfProxy = 
     cluster.state.members.filter { m => m.hasRole("proxy") && m.status == akka.cluster.MemberStatus.Up } map { _.address }
   
+    
+  //TODO: Move this to node getter
   def actorOfProxy = addressesOfProxy.headOption map { addr => akkaSystem.actorSelection(s"$addr/user/$proxyPostfix") }
   
   protected def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) {
@@ -143,20 +163,12 @@ class ForwardCohortProxy(override val txn: Transaction, proxyPostfix: String)(im
   }
 }
 
+import akka.actor.ActorRef
 
-class ConcurrentCohortProxy(override val txn: Transaction)(implicit shardGetter: String => ActorSelection, akkaSystem: ActorSystem) 
-  extends AbstractCohortProxy {
+class ForwardCohortProxyBackend(override val txn: Transaction)(implicit shardGetter: String => ActorSelection, akkaSystem: ActorSystem) 
+  extends ConcurrentCohortProxy(txn) {
   
-  protected def doCanCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) = {
-    import concurrent.ExecutionContext.Implicits.global
-    
-    val replies = txns.subTransactions map {
-      s => invokeCanCommit(s._1, s._2)
-    }
-    
-    Future.sequence(replies).transform(
-        _ => doPreCommit(txns, commitResultPromise), 
-        f => { commitResultPromise.failure(f); f }
-        )
+  override def doPreCommit(txns: TransactionProxy, commitResultPromise: Promise[SubmitResult]) {
+    commitResultPromise success null
   }
 }

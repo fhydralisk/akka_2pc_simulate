@@ -19,10 +19,12 @@ object Frontend {
 
 class Frontend extends EndActor with ActorLogging {
   import Frontend._
+  import NodeGetter.LeaderGetter._
+
   import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages._
   import akka.cluster.pubsub.DistributedPubSubMediator.{Subscribe, SubscribeAck}
   
-  import concurrent.ExecutionContext.Implicits.global
+  import context.dispatcher
   
   val dataBrokerPromise = Promise[DataBroker]
   
@@ -42,20 +44,7 @@ class Frontend extends EndActor with ActorLogging {
   /*
    * Implicit conversion from shard name to actor selection
    */
-  implicit def shardGetter: String => ActorSelection = s => {
-    // akka.tcp://system@address:port/user/shardmanager/$s
-    val role = shardDeployment flatMap { m =>
-       (m filter { _._2.contains(s) } headOption) map { _._1 } 
-    }
-
-    (role flatMap { roleAddresses(_) headOption } ) map { addr => 
-      val actorPath = addr + s"/user/shardmanager/$s"
-      context.actorSelection(actorPath)
-    } getOrElse { 
-      // this throw cause ask failed immediately
-      throw new IllegalArgumentException 
-    }
-  }
+  implicit def shardGetter: String => ActorSelection = NodeGetter.ShardGetter.shardGetter(shardDeployment)
   
   private def uninitialized : Actor.Receive = {
     case GetSettingsTick => tryGetSettings
@@ -117,15 +106,19 @@ class Frontend extends EndActor with ActorLogging {
     log.info(s"start submit test with config: $config")
     val broker = dataBrokerPromise.future.value.get.get
     
-    for (x <- 1 to 10) {
+    val submits = config.getInt("nm-of-submits")
+    val shards = config.getInt("nm-of-shards")
+    val shardPrefix = config.getString("shard-prefix")
+    
+    for (x <- 1 to submits) {
       val trans = broker.newTransaction
+      
       trans flatMap { t =>
-        t.put("shard1", "")
-        t.put("shard2", "")
+        (1 to shards) foreach (n => t.put(shardPrefix + n, ""))
         log.debug(s"submitting txn-${t.transId}")
         t.submit() map { t.transId -> _ }
       } map { case (transId, metrics) =>
-        println("Submit OK")
+        log.info(s"Submit of transaction: $transId Succeed")
         metrics.phaseToTimestamp foreach { case (phase, timestamp) => publish("metrics", MetricsElement(transId, timestamp, phase)) }
       } recover { case e @ _ =>
         println(s"Submit Failed, expection: $e")

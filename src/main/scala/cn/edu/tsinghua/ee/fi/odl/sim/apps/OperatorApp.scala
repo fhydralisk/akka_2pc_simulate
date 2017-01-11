@@ -13,7 +13,7 @@ object OperatorApp {
   def main(args: Array[String]) {
     val operatorConfig = ConfigFactory.parseResources("operator.conf").withFallback(ConfigFactory.parseString("akka.cluster.roles=[\"operator\"]"))
     val system = AkkaSystem.createSystem(Some(operatorConfig))    
-    val submitConfig  = operatorConfig.getConfig("submit")
+    val submitConfig  = operatorConfig.getConfig("testing")
     
     Cluster(system).registerOnMemberUp {
       system.actorOf(Operator.props(submitConfig))

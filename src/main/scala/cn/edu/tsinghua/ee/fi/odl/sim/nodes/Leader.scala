@@ -34,12 +34,23 @@ class Leader extends Actor with ActorLogging {
   var frontendConfigDispatcher : Option[ActorRef] = None
   var transactionIdDispatcher: Option[ActorRef] = None
   var metricsActor: Option[ActorRef] = None
+  var canCommitProxy: Option[ActorRef] = None
+  
+  implicit val system = context.system
   
   override def preStart = {
     shardConfigDispatcher = Some(context.actorOf(ShardConfigDispatcher.props))
     transactionIdDispatcher = Some(context.actorOf(TransactionIDDispatcher.props))
     frontendConfigDispatcher = Some(context.actorOf(FrontendConfigDispatcher.props))
     metricsActor = Some(context.actorOf(MetricsActor.props(new TwoPhaseRecounter)))
+    
+    import collection.JavaConversions._
+    val shardDeployment = Map(
+      LeaderConfiguration.shardDeployConfig.root().toArray map { case (k, v) => (k, v.unwrapped().asInstanceOf[java.util.List[String]].toSet) }: _*
+    )
+    implicit val shardGetter = NodeGetter.ShardGetter.shardGetter(Some(shardDeployment))
+    
+    canCommitProxy = Some(context.actorOf(CanCommitProxy.props, name="proxy"))
   }
   
   def receive = {
@@ -75,7 +86,7 @@ class ShardConfigDispatcher extends Actor with ActorLogging {
   
   import scala.collection.JavaConversions._
   
-  import concurrent.ExecutionContext.Implicits.global
+  import context.dispatcher
   
   def shardDeployTimeout = Timeout(2 seconds)
   def shardDeployTickTimeout = 2 seconds
@@ -187,14 +198,31 @@ class TransactionIDDispatcher extends Actor with ActorLogging {
 
 
 object CanCommitProxy {
-  def props: Props = Props(new CanCommitProxy)
+  def props(implicit shardGetter: String => ActorSelection): Props = Props(new CanCommitProxy)
 }
 
 
-class CanCommitProxy extends Actor with ActorLogging {
+class CanCommitProxy(implicit val shardGetter: String => ActorSelection) extends Actor with ActorLogging {
   // TODO: Implement this proxy which can forward can-commit message to its destination
+  import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitMessages._
+  import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.ForwardCohortProxyBackend
+  import context.dispatcher
+  
+  implicit val system = context.system
+    
   override def receive = {
-    case _ =>
+    case ForwardCanCommit(txn) =>
+      log.debug("forward can-commiting")
+      val cohortProxyBackend = new ForwardCohortProxyBackend(txn)
+      val senderOfMsg = sender
+      cohortProxyBackend.submit() map { _ =>
+        senderOfMsg ! CanCommitAck(txn.transId)
+        log.debug("send back can-commit reply with ack")
+      } recover {
+        case _ => 
+          senderOfMsg ! CanCommitNack(txn.transId)
+          log.debug("send back can-commit reply with NACK")
+      }
   }
 }
 

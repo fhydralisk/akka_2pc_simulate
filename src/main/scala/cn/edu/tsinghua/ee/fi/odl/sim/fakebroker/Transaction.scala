@@ -9,7 +9,6 @@ trait Transaction {
   
   val transId : Int
   def submit() : Future[Transaction.SubmitResult]
-  // FIXME: prefer shard rather than actorref
   def put(path: String, value: String) : Unit //Fake put, ignore the parameter
   def modification : Modification
 }
@@ -31,7 +30,7 @@ object Transaction {
   }
 }
 
-class TransactionProxy(val transId: Int, delegate: TransactionFactory) extends Transaction {
+case class TransactionProxy(val transId: Int, @transient delegate: TransactionFactory) extends Transaction with Serializable {
   val subTransactions = new HashMap[String, Transaction]
   
   def put(dest: String, value: String) {
@@ -43,6 +42,8 @@ class TransactionProxy(val transId: Int, delegate: TransactionFactory) extends T
   }
   
   def modification = null
+  
+  // Serializable
 }
 
 case class WriteTransaction(val transId: Int) extends Transaction {
