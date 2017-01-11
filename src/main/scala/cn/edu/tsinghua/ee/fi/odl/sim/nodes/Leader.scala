@@ -13,7 +13,9 @@ import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages._
 
 
 object LeaderConfiguration {
-  val leaderConfig = ConfigFactory.load("leader.conf")
+  val leaderConfig = ConfigFactory.parseFile(new java.io.File("config/leader.conf"))
+                                  .withFallback(ConfigFactory.parseResources("leader.conf"))
+                                  
   val shardConfig = leaderConfig.getConfig("shard")
   val shardDeployConfig = shardConfig.getConfig("shard-deploy")
   val shardFactoryConfig = shardConfig.getConfig("shard-factory")

@@ -1,16 +1,27 @@
 package cn.edu.tsinghua.ee.fi.odl.sim.nodes
 
 import akka.actor.{Props, ActorLogging}
-import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import concurrent.duration._
 
 
 object Operator {
-  def props(submitConfig: Config): Props = Props(new Operator(submitConfig))
+  def props: Props = Props(new Operator)
 }
 
 
-class Operator(submitConfig: Config) extends EndActor with ActorLogging {
+object OperatorConfiguration {
+  val rootConfig = ConfigFactory.parseFile(new java.io.File("config/operator.conf"))
+                                .withFallback(ConfigFactory.parseResources("operator.conf"))
+                                .getConfig("testing")
+    
+  val submitConfig = rootConfig.getConfig("submit")
+  val metricsConfig = rootConfig.getConfig("metrics")
+}
+
+
+class Operator extends EndActor with ActorLogging {
+  import OperatorConfiguration._
   import cn.edu.tsinghua.ee.fi.odl.sim.util.MetricsMessages._
   import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages.DoSubmit
   
@@ -20,13 +31,13 @@ class Operator(submitConfig: Config) extends EndActor with ActorLogging {
     publish("metrics", ReadyMetrics())
   }
   
-  lazy val metricsDuration = submitConfig.getDuration("metrics.duration")
+  lazy val metricsDuration = metricsConfig.getDuration("duration")
   implicit def jDurationToSDuration: java.time.Duration => FiniteDuration = d => FiniteDuration(d.toNanos(), NANOSECONDS)
   
   def receive = {
     case ReadyMetricsReply(true) =>
       log.info(s"inform frontends to submit, metrics will be end in $metricsDuration")
-      publish("dosubmit", DoSubmit(submitConfig.getConfig("submit")))
+      publish("dosubmit", DoSubmit(submitConfig))
       context.system.scheduler.scheduleOnce(metricsDuration, sender, FinishMetrics())
     case FinishMetricsReply(metrics) =>
       log.info(s"metrics result is ${metrics}")

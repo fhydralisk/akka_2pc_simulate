@@ -43,3 +43,6 @@ build.log
 
 # macOS DS_STORE
 .DS_Store
+
+# config
+config/
