@@ -10,7 +10,8 @@ import cn.edu.tsinghua.ee.fi.odl.sim.nodes.Leader
 object LeaderApp {
   def main(args: Array[String]) {
     
-    val leaderConfig = ConfigFactory.parseResources("leader.conf")
+    val leaderConfig = ConfigFactory.parseFile(new java.io.File("config/leader.conf"))
+                                    .withFallback(ConfigFactory.parseResources("leader.conf"))
     val system = AkkaSystem.createSystem(Some(leaderConfig))
     
     system.actorOf(Leader.props, name="leader")

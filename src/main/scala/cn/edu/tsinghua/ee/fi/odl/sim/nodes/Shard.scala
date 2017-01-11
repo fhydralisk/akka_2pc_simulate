@@ -63,7 +63,7 @@ abstract class AbstractShard(
   def receive = processCanCommit orElse processAbort orElse processCommit
   
   // TODO: make this into settings
-  def canCommitTimeout = 2 seconds
+  def canCommitTimeout = 5 seconds
   
   protected def processCommit: Actor.Receive = {      
     case CommitMessage(txn) =>

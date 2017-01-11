@@ -36,7 +36,8 @@ class CohortProxyFactory(config: Config)(implicit shardGetter: String => ActorSe
 
 abstract class AbstractCohortProxy(implicit val shardGetter: String => ActorSelection, akkaSystem: ActorSystem) extends CohortProxy {
   
-  implicit val timeout : Timeout = 2 seconds
+  // TODO: Make this timeout into settings
+  implicit val timeout : Timeout = 5 seconds
   protected val txn: Transaction
   
   protected val metrics: ThreePhaseMetricsTesting = new ThreePhaseMetricsImpl

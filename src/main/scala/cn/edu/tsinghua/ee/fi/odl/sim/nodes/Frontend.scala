@@ -109,6 +109,7 @@ class Frontend extends EndActor with ActorLogging {
     val submits = config.getInt("nm-of-submits")
     val shards = config.getInt("nm-of-shards")
     val shardPrefix = config.getString("shard-prefix")
+    val wait = config.getDuration("wait-between-commits")
     
     for (x <- 1 to submits) {
       val trans = broker.newTransaction
@@ -123,6 +124,7 @@ class Frontend extends EndActor with ActorLogging {
       } recover { case e @ _ =>
         println(s"Submit Failed, expection: $e")
       }
+      Thread.sleep(wait.getSeconds * 1000)
     }
   }
   
