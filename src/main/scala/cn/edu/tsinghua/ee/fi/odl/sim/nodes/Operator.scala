@@ -26,12 +26,17 @@ class Operator extends EndActor with ActorLogging {
   import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages.DoSubmit
   
   import context.dispatcher
-  context.system.scheduler.scheduleOnce(20 seconds) {
+  
+  val doCommitMessageDelay = rootConfig.getDuration("delay-test-after")
+  val durationBetweenGroups = rootConfig.getDuration("duration-between-tests")
+  val metricsDuration = metricsConfig.getDuration("duration")
+  
+  context.system.scheduler.schedule(doCommitMessageDelay, durationBetweenGroups + metricsDuration) {
     log.info("trying to get metrics module ready")
     publish("metrics", ReadyMetrics())
   }
   
-  lazy val metricsDuration = metricsConfig.getDuration("duration")
+  
   implicit def jDurationToSDuration: java.time.Duration => FiniteDuration = d => FiniteDuration(d.toNanos(), NANOSECONDS)
   
   def receive = {

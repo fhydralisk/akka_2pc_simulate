@@ -124,7 +124,8 @@ class Frontend extends EndActor with ActorLogging {
       } recover { case e @ _ =>
         println(s"Submit Failed, expection: $e")
       }
-      Thread.sleep(wait.getSeconds * 1000)
+      if (!wait.isZero())
+        Thread.sleep(wait.getSeconds * 1000)
     }
   }
   

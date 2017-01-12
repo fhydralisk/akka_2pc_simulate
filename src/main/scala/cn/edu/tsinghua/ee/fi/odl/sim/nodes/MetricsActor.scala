@@ -87,7 +87,10 @@ class TwoPhaseRecounter extends MetricsRecounter[Long] {
          * Then Throughput shall be Se / (t1 - t0)
          */
 
-        val resultThroughput = "Throughput" -> ((map2.size * 1000) / ((container.last._4 - container.head._4) / 1000000))
+        val submitCompleteDuration = (container.last._4 - container.head._4) / 1000000
+        val submitCount = map2.size
+        
+        val resultThroughput = "Throughput" -> ((submitCount * 1000) / submitCompleteDuration)
         resultPhase + resultThroughput
       } else {
         resultPhase

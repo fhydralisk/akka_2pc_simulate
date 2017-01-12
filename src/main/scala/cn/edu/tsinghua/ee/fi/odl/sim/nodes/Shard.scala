@@ -39,18 +39,6 @@ class ShardFactory(config: Config) {
 }
 
 
-object NormalShard {
-  def props(canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], dataTree: DataTree): Props = 
-    Props(new NormalShard(canCommitQueue, dataTree))
-}
-
-
-object DealDeadlockShard {
-  def props(canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], dataTree: DataTree): Props = 
-    Props(new DealDeadlockShard(canCommitQueue, dataTree))
-}
-
-
 abstract class AbstractShard(
     canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], 
     dataTree: DataTree
@@ -171,6 +159,12 @@ abstract class AbstractShard(
 }
 
 
+object NormalShard {
+  def props(canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], dataTree: DataTree): Props = 
+    Props(new NormalShard(canCommitQueue, dataTree))
+}
+
+
 class NormalShard(
     canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], 
     dataTree: DataTree
@@ -185,15 +179,42 @@ class NormalShard(
 }
 
 
-// TODO: Implement this shard, which could respond to multiple can-commit message with different reply
+object DealDeadlockShard {
+  object DoRealCanCommit
+  
+  def props(canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], dataTree: DataTree): Props = 
+    Props(new DealDeadlockShard(canCommitQueue, dataTree))
+}
+
+
+/*
+ *  DealDeadlockShard:
+ *  Shard that ensures the sequence of transaction, which eventually resolves the deadlock.
+ *  IMPORTANT: Sorted Queue needed
+ */
 class DealDeadlockShard(
     canCommitQueue: SimplifiedQueue[Tuple2[Transaction, ActorRef]], 
     dataTree: DataTree
-    ) extends AbstractShard(canCommitQueue, dataTree) {
+    ) extends NormalShard(canCommitQueue, dataTree) {
   
   import cn.edu.tsinghua.ee.fi.odl.sim.fakebroker.CommitMessages._
+  import DealDeadlockShard._
+  import context.dispatcher
   
-  protected def processCanCommit = {
-    case CanCommitMessage(txn) =>
+  
+  val delayFirstCanCommit = 300 millis
+  override def receive = processRealCanCommit orElse super.receive 
+  
+  def processRealCanCommit : Actor.Receive = {
+    case DoRealCanCommit =>
+      maybeProcessNextCanCommit
+  }
+  
+  override protected def maybeCommitOrQueue(txn: Transaction, senderOfTxn: ActorRef) { 
+    (processingTransaction orElse canCommitQueue.peek()) match {
+      case Some(_) => 
+      case None => context.system.scheduler.scheduleOnce(delayFirstCanCommit, self, DoRealCanCommit)
+    }
+    queueCanCommit(txn, senderOfTxn)
   }
 }
