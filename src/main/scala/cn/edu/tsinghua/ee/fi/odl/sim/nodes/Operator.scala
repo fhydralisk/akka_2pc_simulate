@@ -1,15 +1,15 @@
 package cn.edu.tsinghua.ee.fi.odl.sim.nodes
 
 import akka.actor.{Props, ActorLogging}
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.Config
 import concurrent.duration._
 
 
 object Operator {
-  def props: Props = Props(new Operator)
+  def props(config: Config): Props = Props(new Operator(config))
 }
 
-
+/*
 object OperatorConfiguration {
   val rootConfig = ConfigFactory.parseFile(new java.io.File("config/operator.conf"))
                                 .withFallback(ConfigFactory.parseResources("operator.conf"))
@@ -17,18 +17,20 @@ object OperatorConfiguration {
     
   val submitConfig = rootConfig.getConfig("submit")
   val metricsConfig = rootConfig.getConfig("metrics")
-}
+}*/
 
 
-class Operator extends EndActor with ActorLogging {
-  import OperatorConfiguration._
+class Operator(config: Config) extends EndActor with ActorLogging {
   import cn.edu.tsinghua.ee.fi.odl.sim.util.MetricsMessages._
   import cn.edu.tsinghua.ee.fi.odl.sim.util.FrontendMessages.DoSubmit
   
   import context.dispatcher
   
-  val doCommitMessageDelay = rootConfig.getDuration("delay-test-after")
-  val durationBetweenGroups = rootConfig.getDuration("duration-between-tests")
+  val metricsConfig = config.getConfig("metrics")
+  val submitConfig = config.getConfig("submit")
+  
+  val doCommitMessageDelay = config.getDuration("delay-test-after")
+  val durationBetweenGroups = config.getDuration("duration-between-tests")
   val metricsDuration = metricsConfig.getDuration("duration")
   
   context.system.scheduler.schedule(doCommitMessageDelay, durationBetweenGroups + metricsDuration) {
