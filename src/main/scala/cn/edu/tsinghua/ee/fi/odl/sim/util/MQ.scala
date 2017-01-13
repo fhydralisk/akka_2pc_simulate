@@ -8,6 +8,7 @@ trait SimplifiedQueue[T] {
   def offer(node: T)
   def poll() : Option[T]
   def peek() : Option[T]
+  def removeWhen(f: T => Boolean): Option[T]
 }
 
 class QueueWrapper[T] extends SimplifiedQueue[T] {
@@ -20,6 +21,8 @@ class QueueWrapper[T] extends SimplifiedQueue[T] {
   def poll() = if (backing.size > 0) Some(backing.dequeue()) else None
   
   def peek() = if (backing.size > 0) Some(backing.front) else None
+  
+  def removeWhen(f: T => Boolean) = backing dequeueFirst f
 }
 
 class TreeSetWrapper[T](implicit ordering: Ordering[T]) extends SimplifiedQueue[T] {
@@ -39,4 +42,10 @@ class TreeSetWrapper[T](implicit ordering: Ordering[T]) extends SimplifiedQueue[
   }
   
   def peek = backing.headOption
+  
+  def removeWhen(f: T => Boolean) = {
+    val e = backing.filter(f).headOption
+    e foreach { backing.remove }
+    e
+  }
 }
