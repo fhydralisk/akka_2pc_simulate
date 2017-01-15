@@ -221,7 +221,7 @@ class DealDeadlockShard(
   import context.dispatcher
   
   
-  val delayFirstCanCommit = 300 millis
+  val delayFirstCanCommit = 30 millis
   override def receive = processRealCanCommit orElse super.receive 
   
   def processRealCanCommit : Actor.Receive = {
